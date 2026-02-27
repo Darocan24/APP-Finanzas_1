@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Gastos v1.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f3f4f6; font-family: sans-serif; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="max-w-md mx-auto">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6 flex justify-between">
+            💰 Registro de Gastos
+            <span id="total" class="text-blue-600 text-lg">$0</span>
+        </h1>
+
+        <div class="card p-6 mb-6">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Tipo de Gasto</label>
+                    <select id="tipo" class="w-full mt-1 p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        <option value="Alimentación">Alimentación</option>
+                        <option value="Transporte">Transporte</option>
+                        <option value="Servicios">Servicios</option>
+                        <option value="Hogar">Hogar</option>
+                        <option value="Entretenimiento">Entretenimiento</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Nombre del Gasto</label>
+                    <input type="text" id="nombre" placeholder="Ej: Almuerzo oficina" class="w-full mt-1 p-2 border rounded-md">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Valor ($)</label>
+                    <input type="number" id="valor" placeholder="0.00" class="w-full mt-1 p-2 border rounded-md">
+                </div>
+
+                <button onclick="agregarGasto()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 transition">
+                    Guardar Registro
+                </button>
+            </div>
+        </div>
+
+        <h2 class="text-lg font-semibold mb-3 text-gray-700">Historial Reciente</h2>
+        <div id="lista-gastos" class="space-y-2">
+            </div>
+    </div>
+
+    <script>
+        let gastos = JSON.parse(localStorage.getItem('mis_gastos')) || [];
+
+        function actualizarUI() {
+            const lista = document.getElementById('lista-gastos');
+            const totalDisplay = document.getElementById('total');
+            lista.innerHTML = '';
+            
+            let suma = 0;
+            gastos.forEach((g, index) => {
+                suma += parseFloat(g.valor);
+                lista.innerHTML += `
+                    <div class="card p-4 flex justify-between items-center">
+                        <div>
+                            <p class="font-bold text-gray-800">${g.nombre}</p>
+                            <p class="text-xs text-gray-500 uppercase">${g.tipo}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-blue-600 font-semibold">$${parseFloat(g.valor).toLocaleString()}</p>
+                            <button onclick="eliminar(${index})" class="text-red-400 text-xs underline">Eliminar</button>
+                        </div>
+                    </div>
+                `;
+            });
+            totalDisplay.innerText = `$${suma.toLocaleString()}`;
+            localStorage.setItem('mis_gastos', JSON.stringify(gastos));
+        }
+
+        function agregarGasto() {
+            const tipo = document.getElementById('tipo').value;
+            const nombre = document.getElementById('nombre').value;
+            const valor = document.getElementById('valor').value;
+
+            if(!nombre || !valor) return alert("Por favor llena todos los campos");
+
+            gastos.unshift({ tipo, nombre, valor, fecha: new Date() });
+            actualizarUI();
+
+            // Limpiar campos
+            document.getElementById('nombre').value = '';
+            document.getElementById('valor').value = '';
+        }
+
+        function eliminar(index) {
+            gastos.splice(index, 1);
+            actualizarUI();
+        }
+
+        // Carga inicial
+        actualizarUI();
+    </script>
+</body>
+</html>
