@@ -96,7 +96,7 @@
             
                 // 2. Enviar a Google Sheets (Automático)
                 try {
-                    await fetchh(url_google_sheets, {
+                    await fetch(url_google_sheets, {
                         method: 'POST',
                         mode: 'no-cors', // Importante para evitar bloqueos de CORS con Google
                         headers: { 'Content-Type': 'application/json' },
@@ -122,5 +122,6 @@
 </body>
 
 </html>
+
 
 
