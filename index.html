@@ -80,20 +80,36 @@
             localStorage.setItem('mis_gastos', JSON.stringify(gastos));
         }
 
-        function agregarGasto() {
-            const tipo = document.getElementById('tipo').value;
-            const nombre = document.getElementById('nombre').value;
-            const valor = document.getElementById('valor').value;
-
-            if(!nombre || !valor) return alert("Por favor llena todos los campos");
-
-            gastos.unshift({ tipo, nombre, valor, fecha: new Date() });
-            actualizarUI();
-
-            // Limpiar campos
-            document.getElementById('nombre').value = '';
-            document.getElementById('valor').value = '';
-        }
+            async function agregarGasto() {
+                const tipo = document.getElementById('tipo').value;
+                const nombre = document.getElementById('nombre').value;
+                const valor = document.getElementById('valor').value;
+                const url_google_sheets = "PEGA_AQUI_TU_URL_DE_APPS_SCRIPT";
+            
+                if(!nombre || !valor) return alert("Por favor llena todos los campos");
+            
+                const nuevoGasto = { tipo, nombre, valor, fecha: new Date() };
+            
+                // 1. Guardar localmente (lo que ya tenías)
+                gastos.unshift(nuevoGasto);
+                actualizarUI();
+            
+                // 2. Enviar a Google Sheets (Automático)
+                try {
+                    await fetchhttps:https://docs.google.com/spreadsheets/d/1MtXZsKp3tFZRGw_Bz8gdS7hboeD1gDvlC2cp_ETNsaI/edit?gid=298153973#gid=298153973, {
+                        method: 'POST',
+                        mode: 'no-cors', // Importante para evitar bloqueos de CORS con Google
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(nuevoGasto)
+                    });
+                    console.log("Sincronizado con Excel");
+                } catch (error) {
+                    console.error("Error al sincronizar:", error);
+                }
+            
+                document.getElementById('nombre').value = '';
+                document.getElementById('valor').value = '';
+            }
 
         function eliminar(index) {
             gastos.splice(index, 1);
@@ -104,4 +120,5 @@
         actualizarUI();
     </script>
 </body>
+
 </html>
