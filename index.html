@@ -31,15 +31,6 @@
                     </select>
                 </div>
                 
-                <div id="contenedor_cuotas" class="hidden mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                    <label class="block text-sm font-medium text-blue-800">Número de Cuotas</label>
-                    <input type="number" id="cuotas" value="1" min="1" max="48" 
-                           class="w-full mt-1 p-2 border border-blue-300 rounded-md focus:ring-blue-500">
-                    <p class="text-[10px] text-blue-400 mt-1">* Solo para Tarjetas de Crédito (Gold/Zero)</p>
-                </div>
-
-
-                
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Nombre del Gasto</label>
                     <input type="text" id="nombre" placeholder="Ej: Corralazo" class="w-full mt-1 p-2 border rounded-md">
@@ -58,6 +49,13 @@
                         <option value="Tarjeta Gold">Tarjeta Gold</option>
                         <option value="Tarjeta Zero">Tarjeta Zero</option>
                     </select>
+                </div>
+
+                 <div id="contenedor_cuotas" class="hidden mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                    <label class="block text-sm font-medium text-blue-800">Número de Cuotas</label>
+                    <input type="number" id="cuotas" value="1" min="1" max="48" 
+                           class="w-full mt-1 p-2 border border-blue-300 rounded-md focus:ring-blue-500">
+                    <p class="text-[10px] text-blue-400 mt-1">* Solo para Tarjetas de Crédito (Gold/Zero)</p>
                 </div>
                 
                 <button onclick="agregarGasto()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 transition">
@@ -147,7 +145,7 @@
                 let pendientes = JSON.parse(localStorage.getItem('cola_sync')) || [];
                 if (pendientes.length === 0) return;
             
-                const url_google_sheets = "https://script.google.com/macros/s/AKfycbx7xN95gSu81RXUNuSCKG3XQeHIT2vPWMxjWxKDCMbjumHMUKlhbIgBzliL1F_KeoNE/exec";
+                const url_google_sheets = "https://script.google.com/macros/s/AKfycbz1rBcFQ1SKp3vsIvWp0anERisxmNzWKWpOGGu3koPCakIA_cucF2ezQ6iDMfDbuF5m/exec";
             
                 // Procesamos cada pendiente
                 for (let i = 0; i < pendientes.length; i++) {
@@ -195,6 +193,7 @@
 </body>
 
 </html>
+
 
 
 
