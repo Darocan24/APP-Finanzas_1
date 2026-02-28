@@ -13,7 +13,7 @@
 <body class="p-4">
 
     <div class="max-w-md mx-auto">
-        <h1 class="text-2xl font-bold text-gray-800 mb-6 flex justify-between">
+        <h1 class="text-2xl font-bold text-white mb-6 flex justify-between">
             💰 Registro de Gastos
             <span id="total" class="text-blue-600 text-lg">$0</span>
         </h1>
@@ -30,10 +30,19 @@
                         <option value="Entretenimiento">Entretenimiento</option>
                     </select>
                 </div>
+                
+                <div id="contenedor_cuotas" class="hidden mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                    <label class="block text-sm font-medium text-blue-800">Número de Cuotas</label>
+                    <input type="number" id="cuotas" value="1" min="1" max="48" 
+                           class="w-full mt-1 p-2 border border-blue-300 rounded-md focus:ring-blue-500">
+                    <p class="text-[10px] text-blue-400 mt-1">* Solo para Tarjetas de Crédito (Gold/Zero)</p>
+                </div>
 
+
+                
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Nombre del Gasto</label>
-                    <input type="text" id="nombre" placeholder="Ej: Almuerzo oficina" class="w-full mt-1 p-2 border rounded-md">
+                    <input type="text" id="nombre" placeholder="Ej: Corralazo" class="w-full mt-1 p-2 border rounded-md">
                 </div>
 
                 <div>
@@ -57,7 +66,7 @@
             </div>
         </div>
 
-        <h2 class="text-lg font-semibold mb-3 text-gray-700">Historial Reciente</h2>
+        <h2 class="text-lg font-semibold mb-3 text-white">Historial Reciente</h2>
         <div id="lista-gastos" class="space-y-2">
             </div>
     </div>
@@ -96,6 +105,12 @@
                 const nombre = document.getElementById('nombre').value;
                 const valor = document.getElementById('valor').value;
                 const medioPago = document.getElementById('medio_pago').value;
+
+                // Capturar cuotas: si es crédito usa el valor del input, si no, es 1
+                    let cuotas = 1;
+                    if (medioPago === 'Tarjeta Gold' || medioPago === 'Tarjeta Zero') {
+                        cuotas = document.getElementById('cuotas').value || 1;
+                    }
             
                 if(!nombre || !valor) return alert("Llena los campos");
             
@@ -104,6 +119,7 @@
                     nombre, 
                     valor: parseFloat(valor),
                     medioPago,
+                    cuotas,
                     fecha: new Date().toLocaleString(),
                     id: Date.now() // ID único para control
                 };
@@ -131,7 +147,7 @@
                 let pendientes = JSON.parse(localStorage.getItem('cola_sync')) || [];
                 if (pendientes.length === 0) return;
             
-                const url_google_sheets = "https://script.google.com/macros/s/AKfycbzK_d6H_pXpD67HeeOZhiuirG5hZ7SdDTsAgogkeX1qaw8vCaH1FjweCMgKgUkmQCni/exec";
+                const url_google_sheets = "https://script.google.com/macros/s/AKfycbx7xN95gSu81RXUNuSCKG3XQeHIT2vPWMxjWxKDCMbjumHMUKlhbIgBzliL1F_KeoNE/exec";
             
                 // Procesamos cada pendiente
                 for (let i = 0; i < pendientes.length; i++) {
@@ -161,13 +177,25 @@
             gastos.splice(index, 1);
             actualizarUI();
         }
-
+        document.getElementById('medio_pago').addEventListener('change', function() {
+            const medio = this.value;
+            const contenedor = document.getElementById('contenedor_cuotas');
+            
+            // Lógica condicional: Si es Gold o Zero, mostramos el campo
+            if (medio === 'Tarjeta Gold' || medio === 'Tarjeta Zero') {
+                contenedor.classList.remove('hidden');
+            } else {
+                contenedor.classList.add('hidden');
+                document.getElementById('cuotas').value = 1; // Reset a 1 si cambia a efectivo/débito
+            }
+        });
         // Carga inicial
         actualizarUI();
     </script>
 </body>
 
 </html>
+
 
 
 
