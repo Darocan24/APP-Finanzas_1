@@ -79,55 +79,71 @@
             totalDisplay.innerText = `$${suma.toLocaleString()}`;
             localStorage.setItem('mis_gastos', JSON.stringify(gastos));
         }
-
-           async function agregarGasto() {
+        // 1. Nueva función para agregar a la cola de pendientes
+            async function agregarGasto() {
                 const tipo = document.getElementById('tipo').value;
                 const nombre = document.getElementById('nombre').value;
                 const valor = document.getElementById('valor').value;
-                
-                // IMPORTANTE: Verifica que esta URL termine en /exec
-                const url_google_sheets = "https://script.google.com/macros/s/AKfycbza9QO7KWFQzANiPpAdpJaj7GoJcCatozL9JBEHbLOSLklzA-hp8DkFzmsDMSPoweFv/exec";
             
-                if(!nombre || !valor) {
-                    alert("Por favor llena todos los campos");
-                    return;
-                }
+                if(!nombre || !valor) return alert("Llena los campos");
             
-                // 1. CREAR EL OBJETO
                 const nuevoGasto = { 
-                    tipo: tipo, 
-                    nombre: nombre, 
+                    tipo, 
+                    nombre, 
                     valor: parseFloat(valor), 
-                    fecha: new Date().toLocaleString() 
+                    fecha: new Date().toLocaleString(),
+                    id: Date.now() // ID único para control
                 };
             
-                // 2. ACTUALIZAR LOCALMENTE PRIMERO (Garantiza que lo veas en el celular)
-                try {
-                    gastos.unshift(nuevoGasto);
-                    actualizarUI(); // Esto guarda en LocalStorage y refresca la lista
-                    
-                    // Limpiar campos inmediatamente para dar feedback de éxito
-                    document.getElementById('nombre').value = '';
-                    document.getElementById('valor').value = '';
-                    
-                    console.log("Local: Guardado con éxito");
-                } catch (e) {
-                    console.error("Error local:", e);
-                }
+                // Guardar en el historial local (lo que ya ves en pantalla)
+                gastos.unshift(nuevoGasto);
+                actualizarUI();
             
-                // 3. ENVIAR A GOOGLE SHEETS EN SEGUNDO PLANO
-                // Usamos fetch sin 'await' al inicio para no bloquear la UI
-                fetch(url_google_sheets, {
-                    method: 'POST',
-                    mode: 'no-cors', 
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(nuevoGasto)
-                }).then(() => {
-                    console.log("Excel: Sincronización enviada");
-                }).catch(err => {
-                    console.error("Excel: Error de red", err);
-                });
+                // GUARDAR EN COLA DE PENDIENTES
+                let pendientes = JSON.parse(localStorage.getItem('cola_sync')) || [];
+                pendientes.push(nuevoGasto);
+                localStorage.setItem('cola_sync', JSON.stringify(pendientes));
+            
+                // Intentar sincronizar inmediatamente
+                intentarSincronizar();
+            
+                document.getElementById('nombre').value = '';
+                document.getElementById('valor').value = '';
             }
+            
+            // 2. Función que procesa los pendientes
+            async function intentarSincronizar() {
+                if (!navigator.onLine) return; // Si no hay internet, ni lo intenta
+            
+                let pendientes = JSON.parse(localStorage.getItem('cola_sync')) || [];
+                if (pendientes.length === 0) return;
+            
+                const url_google_sheets = "https://script.google.com/macros/s/AKfycbza9QO7KWFQzANiPpAdpJaj7GoJcCatozL9JBEHbLOSLklzA-hp8DkFzmsDMSPoweFv/exec";
+            
+                // Procesamos cada pendiente
+                for (let i = 0; i < pendientes.length; i++) {
+                    try {
+                        await fetch(url_google_sheets, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            body: JSON.stringify(pendientes[i])
+                        });
+                        
+                        // Si tiene éxito (o al menos se envió), lo quitamos de la cola
+                        pendientes.splice(i, 1);
+                        i--; 
+                    } catch (error) {
+                        console.log("Fallo de red, se queda en cola");
+                        break; // Detiene el bucle si falla la red
+                    }
+                }
+                
+                localStorage.setItem('cola_sync', JSON.stringify(pendientes));
+            }
+            
+            // 3. Detectar cuando vuelve el internet automáticamente
+            window.addEventListener('online', intentarSincronizar);
+        
         function eliminar(index) {
             gastos.splice(index, 1);
             actualizarUI();
@@ -139,6 +155,7 @@
 </body>
 
 </html>
+
 
 
 
