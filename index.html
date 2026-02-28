@@ -6,7 +6,7 @@
     <title>Mis Gastos v1.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #f3f4f6; font-family: sans-serif; }
+        body { background-color: #1d3566; font-family: sans-serif; }
         .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     </style>
 </head>
@@ -40,9 +40,19 @@
                     <label class="block text-sm font-medium text-gray-700">Valor ($)</label>
                     <input type="number" id="valor" placeholder="0.00" class="w-full mt-1 p-2 border rounded-md">
                 </div>
-
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Medio de Pago</label>
+                    <select id="medio_pago" class="w-full mt-1 p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Tarjeta Débito">Tarjeta Débito</option>
+                        <option value="Tarjeta Gold">Tarjeta Gold</option>
+                        <option value="Tarjeta Zero">Tarjeta Zero</option>
+                    </select>
+                </div>
+                
                 <button onclick="agregarGasto()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 transition">
-                    Guardar Registro
+                    Registrar Gasto
                 </button>
             </div>
         </div>
@@ -68,6 +78,7 @@
                         <div>
                             <p class="font-bold text-gray-800">${g.nombre}</p>
                             <p class="text-xs text-gray-500 uppercase">${g.tipo}</p>
+                            <p class="text-[10px] text-blue-500 font-medium mt-1">💳 ${g.medioPago}</p>
                         </div>
                         <div class="text-right">
                             <p class="text-blue-600 font-semibold">$${parseFloat(g.valor).toLocaleString()}</p>
@@ -84,13 +95,15 @@
                 const tipo = document.getElementById('tipo').value;
                 const nombre = document.getElementById('nombre').value;
                 const valor = document.getElementById('valor').value;
+                const medioPago = document.getElementById('medio_pago').value;
             
                 if(!nombre || !valor) return alert("Llena los campos");
             
                 const nuevoGasto = { 
                     tipo, 
                     nombre, 
-                    valor: parseFloat(valor), 
+                    valor: parseFloat(valor),
+                    medioPago,
                     fecha: new Date().toLocaleString(),
                     id: Date.now() // ID único para control
                 };
@@ -118,7 +131,7 @@
                 let pendientes = JSON.parse(localStorage.getItem('cola_sync')) || [];
                 if (pendientes.length === 0) return;
             
-                const url_google_sheets = "https://script.google.com/macros/s/AKfycbza9QO7KWFQzANiPpAdpJaj7GoJcCatozL9JBEHbLOSLklzA-hp8DkFzmsDMSPoweFv/exec";
+                const url_google_sheets = "https://script.google.com/macros/s/AKfycbzK_d6H_pXpD67HeeOZhiuirG5hZ7SdDTsAgogkeX1qaw8vCaH1FjweCMgKgUkmQCni/exec";
             
                 // Procesamos cada pendiente
                 for (let i = 0; i < pendientes.length; i++) {
@@ -155,6 +168,7 @@
 </body>
 
 </html>
+
 
 
 
