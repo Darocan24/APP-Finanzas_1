@@ -25,9 +25,11 @@
                     <select id="tipo" class="w-full mt-1 p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500">
                         <option value="Alimentación">Alimentación</option>
                         <option value="Transporte">Transporte</option>
-                        <option value="Servicios">Servicios</option>
+                        <option value="Cuidado Personal">Servicios</option>
                         <option value="Hogar">Hogar</option>
                         <option value="Entretenimiento">Entretenimiento</option>
+                        <option value="Mascotas">Mascotas</option>
+                        <option value="Regalos">Regalos</option>
                     </select>
                 </div>
                 
@@ -105,7 +107,7 @@
                 const medioPago = document.getElementById('medio_pago').value;
 
                 // Capturar cuotas: si es crédito usa el valor del input, si no, es 1
-                    let cuotas = 1;
+                    let cuotas = "";
                     if (medioPago === 'Tarjeta Gold' || medioPago === 'Tarjeta Zero') {
                         cuotas = document.getElementById('cuotas').value || 1;
                     }
@@ -193,6 +195,7 @@
 </body>
 
 </html>
+
 
 
 
