@@ -72,6 +72,36 @@
     </div>
 
     <script>
+        function verificarReinicioMensual() {
+            const fechaActual = new Date();
+            const periodoActual = `${fechaActual.getMonth()}-${fechaActual.getFullYear()}`;
+            const ultimoPeriodo = localStorage.getItem('ultimo_periodo_uso');
+        
+            // Si el periodo cambió (nuevo mes)
+            if (ultimoPeriodo && ultimoPeriodo !== periodoActual) {
+                console.log("Cambio de mes detectado. Aplicando limpieza segura...");
+        
+                // Traemos los gastos actuales
+                let gastosLocal = JSON.parse(localStorage.getItem('gastos')) || [];
+        
+                // FILTRADO SEGURO: 
+                // Mantenemos solo los que NO se han enviado (enviado === false)
+                const gastosPendientes = gastosLocal.filter(g => g.enviado === false);
+        
+                // Guardamos solo los pendientes para el nuevo mes
+                localStorage.setItem('gastos', JSON.stringify(gastosPendientes));
+                
+                // Actualizamos el marcador de mes
+                localStorage.setItem('ultimo_periodo_uso', periodoActual);
+                
+                if (gastosPendientes.length > 0) {
+                    alert(`Se inició un nuevo mes. Se mantuvieron ${gastosPendientes.length} gastos pendientes por enviar.`);
+                }
+            } else if (!ultimoPeriodo) {
+                // Si es la primera vez que usa la app, solo marcamos el periodo
+                localStorage.setItem('ultimo_periodo_uso', periodoActual);
+            }
+        }
         let gastos = JSON.parse(localStorage.getItem('mis_gastos')) || [];
 
         function actualizarUI() {
