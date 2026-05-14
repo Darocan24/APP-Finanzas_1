@@ -34,7 +34,15 @@
                         <option value="Pago_Deuda">Pago Dauda</option>
                     </select>
                 </div>
-                
+                </select>
+
+                <Selector de Deudas Específicas (Oculto al inicio)>
+                <div id="contenedorDeudas" style="display:none; margin-top:10px;">
+                  <label for="deudaSeleccionada">Selecciona la deuda a pagar:</label>
+                  <select id="deudaSeleccionada" style="width:100%; padding:10px; border-radius:8px;">
+                    <option value="">Cargando deudas...</option>
+                  </select>
+                </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Nombre del Gasto</label>
                     <input type="text" id="nombre" placeholder="Ej: Corralazo" class="w-full mt-1 p-2 border rounded-md">
@@ -180,7 +188,45 @@
                 if (pendientes.length === 0) return;
             
                 const url_google_sheets = "https://script.google.com/macros/s/AKfycbz_RptRRgPELXm5avggUt67QDjOrHMu4DAQxVcDJnosFbaRhgAeQt_MewzBO4ap2nyU/exec";
-            
+
+                // Función para mostrar/ocultar el selector de deudas
+                function verificarTipo() {
+                  const tipo = document.getElementById("tipo").value;
+                  const contenedor = document.getElementById("contenedorDeudas");
+                    
+                  let nombreGasto;
+                  const tipo = document.getElementById("tipo").value;
+                    
+                  if (tipo === "Pago_Deuda") {
+                      nombreGasto = document.getElementById("deudaSeleccionada").value;
+                      // También es importante enviar qué tarjeta es para que el Excel sepa dónde descontar
+                      var select = document.getElementById("deudaSeleccionada");
+                      var tarjetaElegida = select.options[select.selectedIndex].dataset.tarjeta;
+                      // Aquí podrías actualizar data.medioPago para que sea igual a la tarjeta de la deuda
+                    } else {
+                      nombreGasto = document.getElementById("nombre").value;
+                    }
+
+                // Función que pide las deudas al Excel
+                function cargarDeudas() {
+                  fetch(URL_SCRIPT)
+                    .then(response => response.json())
+                    .then(deudas => {
+                      const selectDeuda = document.getElementById("deudaSeleccionada");
+                      selectDeuda.innerHTML = '<option value="">-- Selecciona una deuda --</option>';
+                      
+                      deudas.forEach(deuda => {
+                        let opcion = document.createElement("option");
+                        // Guardamos el nombre y la tarjeta para enviarlos luego
+                        opcion.value = deuda.nombre; 
+                        opcion.text = `${deuda.tarjeta}: ${deuda.nombre} (Faltan ${deuda.cuotas} cuotas)`;
+                        opcion.dataset.tarjeta = deuda.tarjeta; // Guardamos metadata
+                        selectDeuda.appendChild(opcion);
+                      });
+                    })
+                    .catch(error => console.error("Error cargando deudas:", error));
+                }
+                                
                 // Procesamos cada pendiente
                 for (let i = 0; i < pendientes.length; i++) {
                     try {
