@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="manifest" href="IconoApp.png">
+    <!-- Cambié esto a link rel="icon" porque un manifest debe ser un archivo .json -->
+    <link rel="icon" href="IconoApp.png">
     <title>Mis Gastos v1.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -21,9 +22,10 @@
 
         <div class="card p-6 mb-6">
             <div class="space-y-4">
+                <!-- TIPO DE GASTO -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Tipo de Gasto</label>
-                    <select id="tipo" class="w-full mt-1 p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500">
+                    <select id="tipo" onchange="verificarTipo()" class="w-full mt-1 p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500">
                         <option value="Alimentación">Alimentación</option>
                         <option value="Transporte">Transporte</option>
                         <option value="Cuidado Personal">Cuidado Personal</option>
@@ -31,28 +33,31 @@
                         <option value="Entretenimiento">Entretenimiento</option>
                         <option value="Mascotas">Mascotas</option>
                         <option value="Regalos">Regalos</option>
-                        <option value="Pago_Deuda">Pago Dauda</option>
+                        <option value="Pago_Deuda">Pago Deuda</option>
                     </select>
                 </div>
-                </select>
 
-                //Selector de Deudas Específicas (Oculto al inicio)
-                <div id="contenedorDeudas" style="display:none; margin-top:10px;">
-                  <label for="deudaSeleccionada">Selecciona la deuda a pagar:</label>
-                  <select id="deudaSeleccionada" style="width:100%; padding:10px; border-radius:8px;">
-                    <option value="">Cargando deudas...</option>
-                  </select>
+                <!-- SELECTOR DE DEUDAS (Solo aparece en Pago_Deuda) -->
+                <div id="contenedorDeudas" style="display:none;" class="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <label class="block text-sm font-medium text-yellow-800">Selecciona la deuda a pagar:</label>
+                    <select id="deudaSeleccionada" class="w-full mt-1 p-2 border border-yellow-300 rounded-md">
+                        <option value="">Cargando deudas...</option>
+                    </select>
                 </div>
-                <div>
+
+                <!-- NOMBRE DEL GASTO -->
+                <div id="contenedorNombre">
                     <label class="block text-sm font-medium text-gray-700">Nombre del Gasto</label>
                     <input type="text" id="nombre" placeholder="Ej: Corralazo" class="w-full mt-1 p-2 border rounded-md">
                 </div>
 
+                <!-- VALOR -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Valor ($)</label>
                     <input type="number" id="valor" placeholder="0.00" class="w-full mt-1 p-2 border rounded-md">
                 </div>
                 
+                <!-- MEDIO DE PAGO -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Medio de Pago</label>
                     <select id="medio_pago" class="w-full mt-1 p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500">
@@ -63,11 +68,10 @@
                     </select>
                 </div>
 
-                 <div id="contenedor_cuotas" class="hidden mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <!-- CUOTAS -->
+                <div id="contenedor_cuotas" class="hidden mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
                     <label class="block text-sm font-medium text-blue-800">Número de Cuotas</label>
-                    <input type="number" id="cuotas" value="1" min="1" max="48" 
-                           class="w-full mt-1 p-2 border border-blue-300 rounded-md focus:ring-blue-500">
-                    <p class="text-[10px] text-blue-400 mt-1">* Solo para Tarjetas de Crédito (Gold/Zero)</p>
+                    <input type="number" id="cuotas" value="1" min="1" max="48" class="w-full mt-1 p-2 border border-blue-300 rounded-md">
                 </div>
                 
                 <button onclick="agregarGasto()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 transition">
@@ -77,48 +81,65 @@
         </div>
 
         <h2 class="text-lg font-semibold mb-3 text-white">Historial Reciente</h2>
-        <div id="lista-gastos" class="space-y-2">
-            </div>
+        <div id="lista-gastos" class="space-y-2"></div>
     </div>
 
     <script>
-        function verificarReinicioMensual() {
-            const fechaActual = new Date();
-            const periodoActual = `${fechaActual.getMonth()}-${fechaActual.getFullYear()}`;
-            const ultimoPeriodo = localStorage.getItem('ultimo_periodo_uso');
-        
-            // Si el periodo cambió (nuevo mes)
-            if (ultimoPeriodo && ultimoPeriodo !== periodoActual) {
-                console.log("Cambio de mes detectado. Aplicando limpieza segura...");
-        
-                // Traemos los gastos actuales
-                let gastosLocal = JSON.parse(localStorage.getItem('gastos')) || [];
-        
-                // FILTRADO SEGURO: 
-                // Mantenemos solo los que NO se han enviado (enviado === false)
-                const gastosPendientes = gastosLocal.filter(g => g.enviado === false);
-        
-                // Guardamos solo los pendientes para el nuevo mes
-                localStorage.setItem('gastos', JSON.stringify(gastosPendientes));
-                
-                // Actualizamos el marcador de mes
-                localStorage.setItem('ultimo_periodo_uso', periodoActual);
-                
-                if (gastosPendientes.length > 0) {
-                    alert(`Se inició un nuevo mes. Se mantuvieron ${gastosPendientes.length} gastos pendientes por enviar.`);
-                }
-            } else if (!ultimoPeriodo) {
-                // Si es la primera vez que usa la app, solo marcamos el periodo
-                localStorage.setItem('ultimo_periodo_uso', periodoActual);
+        const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbz_RptRRgPELXm5avggUt67QDjOrHMu4DAQxVcDJnosFbaRhgAeQt_MewzBO4ap2nyU/exec";
+        let gastos = JSON.parse(localStorage.getItem('mis_gastos')) || [];
+
+        // --- LÓGICA DE INTERFAZ ---
+
+        function verificarTipo() {
+            const tipo = document.getElementById("tipo").value;
+            const contDeudas = document.getElementById("contenedorDeudas");
+            const contNombre = document.getElementById("contenedorNombre");
+            
+            if (tipo === "Pago_Deuda") {
+                contDeudas.style.display = "block";
+                contNombre.style.display = "none";
+                cargarDeudas();
+            } else {
+                contDeudas.style.display = "none";
+                contNombre.style.display = "block";
             }
         }
-        let gastos = JSON.parse(localStorage.getItem('mis_gastos')) || [];
+
+        async function cargarDeudas() {
+            try {
+                const response = await fetch(URL_SCRIPT);
+                const deudas = await response.json();
+                const selectDeuda = document.getElementById("deudaSeleccionada");
+                selectDeuda.innerHTML = '<option value="">-- Selecciona deuda --</option>';
+                
+                deudas.forEach(deuda => {
+                    let opcion = document.createElement("option");
+                    opcion.value = deuda.nombre;
+                    opcion.text = `${deuda.tarjeta}: ${deuda.nombre} (Falta: ${deuda.cuotas})`;
+                    opcion.dataset.tarjeta = deuda.tarjeta;
+                    selectDeuda.appendChild(opcion);
+                });
+            } catch (error) {
+                console.error("Error cargando deudas:", error);
+            }
+        }
+
+        document.getElementById('medio_pago').addEventListener('change', function() {
+            const contenedor = document.getElementById('contenedor_cuotas');
+            if (this.value === 'Tarjeta Gold' || this.value === 'Tarjeta Zero') {
+                contenedor.classList.remove('hidden');
+            } else {
+                contenedor.classList.add('hidden');
+                document.getElementById('cuotas').value = 1;
+            }
+        });
+
+        // --- LÓGICA DE GASTOS ---
 
         function actualizarUI() {
             const lista = document.getElementById('lista-gastos');
             const totalDisplay = document.getElementById('total');
             lista.innerHTML = '';
-            
             let suma = 0;
             gastos.forEach((g, index) => {
                 suma += parseFloat(g.valor);
@@ -133,159 +154,78 @@
                             <p class="text-blue-600 font-semibold">$${parseFloat(g.valor).toLocaleString()}</p>
                             <button onclick="eliminar(${index})" class="text-red-400 text-xs underline">Eliminar</button>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             });
             totalDisplay.innerText = `$${suma.toLocaleString()}`;
             localStorage.setItem('mis_gastos', JSON.stringify(gastos));
         }
-        // 1. Nueva función para agregar a la cola de pendientes
-            async function agregarGasto() {
-                const tipo = document.getElementById('tipo').value;
-                const nombre = document.getElementById('nombre').value;
-                const valor = document.getElementById('valor').value;
-                const medioPago = document.getElementById('medio_pago').value;
 
-                // Capturar cuotas: si es crédito usa el valor del input, si no, es 1
-                    let cuotas = "";
-                    if (medioPago === 'Tarjeta Gold' || medioPago === 'Tarjeta Zero') {
-                        cuotas = document.getElementById('cuotas').value || 1;
-                    }
-            
-                if(!nombre || !valor) return alert("Llena los campos");
-            
-                const nuevoGasto = { 
-                    tipo, 
-                    nombre, 
-                    valor: parseFloat(valor),
-                    medioPago,
-                    cuotas,
-                    fecha: new Date().toLocaleString(),
-                    id: Date.now() // ID único para control
-                };
-            
-                // Guardar en el historial local (lo que ya ves en pantalla)
-                gastos.unshift(nuevoGasto);
-                actualizarUI();
-            
-                // GUARDAR EN COLA DE PENDIENTES
-                let pendientes = JSON.parse(localStorage.getItem('cola_sync')) || [];
-                pendientes.push(nuevoGasto);
-                localStorage.setItem('cola_sync', JSON.stringify(pendientes));
-            
-                // Intentar sincronizar inmediatamente
-                intentarSincronizar();
-            
-                document.getElementById('nombre').value = '';
-                document.getElementById('valor').value = '';
-            }
-            
-            // 2. Función que procesa los pendientes
-            async function intentarSincronizar() {
-                if (!navigator.onLine) return; // Si no hay internet, ni lo intenta
-            
-                let pendientes = JSON.parse(localStorage.getItem('cola_sync')) || [];
-                if (pendientes.length === 0) return;
-            
-                const url_google_sheets = "https://script.google.com/macros/s/AKfycbz_RptRRgPELXm5avggUt67QDjOrHMu4DAQxVcDJnosFbaRhgAeQt_MewzBO4ap2nyU/exec";
+        async function agregarGasto() {
+            const tipo = document.getElementById('tipo').value;
+            const valor = document.getElementById('valor').value;
+            let medioPago = document.getElementById('medio_pago').value;
+            let nombre, cuotas = "";
 
-                // Función para mostrar/ocultar el selector de deudas
-                function verificarTipo() {
-                  const tipo = document.getElementById("tipo").value;
-                  const contenedor1 = document.getElementById("contenedorDeudas");
-                    
-                  let nombreGasto;
-                  const tipo = document.getElementById("tipo").value;
-                    
-                  if (tipo === "Pago_Deuda") {
-                      nombreGasto = document.getElementById("deudaSeleccionada").value;
-                      // También es importante enviar qué tarjeta es para que el Excel sepa dónde descontar
-                      var select = document.getElementById("deudaSeleccionada");
-                      var tarjetaElegida = select.options[select.selectedIndex].dataset.tarjeta;
-                      // Aquí podrías actualizar data.medioPago para que sea igual a la tarjeta de la deuda
-                    } else {
-                      nombreGasto = document.getElementById("nombre").value;
-                    }
-
-                // Función que pide las deudas al Excel
-                function cargarDeudas() {
-                  fetch(URL_SCRIPT)
-                    .then(response => response.json())
-                    .then(deudas => {
-                      const selectDeuda = document.getElementById("deudaSeleccionada");
-                      selectDeuda.innerHTML = '<option value="">-- Selecciona una deuda --</option>';
-                      
-                      deudas.forEach(deuda => {
-                        let opcion = document.createElement("option");
-                        // Guardamos el nombre y la tarjeta para enviarlos luego
-                        opcion.value = deuda.nombre; 
-                        opcion.text = `${deuda.tarjeta}: ${deuda.nombre} (Faltan ${deuda.cuotas} cuotas)`;
-                        opcion.dataset.tarjeta = deuda.tarjeta; // Guardamos metadata
-                        selectDeuda.appendChild(opcion);
-                      });
-                    })
-                    .catch(error => console.error("Error cargando deudas:", error));
+            if (tipo === "Pago_Deuda") {
+                const sel = document.getElementById("deudaSeleccionada");
+                nombre = sel.value;
+                medioPago = sel.options[sel.selectedIndex].dataset.tarjeta;
+                cuotas = "PAGO"; // Marcador para el script
+            } else {
+                nombre = document.getElementById('nombre').value;
+                if (medioPago === 'Tarjeta Gold' || medioPago === 'Tarjeta Zero') {
+                    cuotas = document.getElementById('cuotas').value || 1;
                 }
-                                
-                // Procesamos cada pendiente
-                for (let i = 0; i < pendientes.length; i++) {
-                    try {
-                        await fetch(url_google_sheets, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            body: JSON.stringify(pendientes[i])
-                        });
-                        
-                        // Si tiene éxito (o al menos se envió), lo quitamos de la cola
-                        pendientes.splice(i, 1);
-                        i--; 
-                    } catch (error) {
-                        console.log("Fallo de red, se queda en cola");
-                        break; // Detiene el bucle si falla la red
-                    }
-                }
-                
-                localStorage.setItem('cola_sync', JSON.stringify(pendientes));
             }
+
+            if(!nombre || !valor) return alert("Llena los campos");
+
+            const nuevoGasto = { 
+                tipo, nombre, valor: parseFloat(valor), medioPago, cuotas,
+                fecha: new Date().toLocaleString(), id: Date.now() 
+            };
+
+            gastos.unshift(nuevoGasto);
+            actualizarUI();
+
+            // Cola de sincronización
+            let pendientes = JSON.parse(localStorage.getItem('cola_sync')) || [];
+            pendientes.push(nuevoGasto);
+            localStorage.setItem('cola_sync', JSON.stringify(pendientes));
             
-            // 3. Detectar cuando vuelve el internet automáticamente
-            window.addEventListener('online', intentarSincronizar);
-        
+            intentarSincronizar();
+
+            // Reset campos
+            document.getElementById('nombre').value = '';
+            document.getElementById('valor').value = '';
+        }
+
+        async function intentarSincronizar() {
+            if (!navigator.onLine) return;
+            let pendientes = JSON.parse(localStorage.getItem('cola_sync')) || [];
+            if (pendientes.length === 0) return;
+
+            for (let i = 0; i < pendientes.length; i++) {
+                try {
+                    await fetch(URL_SCRIPT, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        body: JSON.stringify(pendientes[i])
+                    });
+                    pendientes.splice(i, 1);
+                    i--; 
+                } catch (error) { break; }
+            }
+            localStorage.setItem('cola_sync', JSON.stringify(pendientes));
+        }
+
         function eliminar(index) {
             gastos.splice(index, 1);
             actualizarUI();
         }
-        document.getElementById('medio_pago').addEventListener('change', function() {
-            const medio = this.value;
-            const contenedor = document.getElementById('contenedor_cuotas');
-            
-            // Lógica condicional: Si es Gold o Zero, mostramos el campo
-            if (medio === 'Tarjeta Gold' || medio === 'Tarjeta Zero') {
-                contenedor.classList.remove('hidden');
-            } else {
-                contenedor.classList.add('hidden');
-                document.getElementById('cuotas').value = 1; // Reset a 1 si cambia a efectivo/débito
-            }
-        });
-        // Carga inicial
+
+        window.addEventListener('online', intentarSincronizar);
         actualizarUI();
     </script>
 </body>
-
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
