@@ -84,6 +84,39 @@
         <div id="lista-gastos" class="space-y-2"></div>
     </div>
 
+                <div id="modalDeuda" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50" onclick="cerrarModal(event)">
+                <div class="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 transform transition-all" onclick="event.stopPropagation()">
+                    <h3 id="modalNombre" class="text-xl font-bold text-gray-900 border-b pb-2 mb-4 flex items-center gap-2">
+                        📌 Nombre de la Deuda
+                    </h3>
+                    
+                    <div class="space-y-3 text-sm text-gray-600">
+                        <div class="flex justify-between border-b border-gray-100 pb-1">
+                            <span class="font-medium text-gray-500">Fecha de compra:</span>
+                            <span id="modalFecha" class="text-gray-900 font-semibold">-</span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-100 pb-1">
+                            <span class="font-medium text-gray-500">Tipo de pago:</span>
+                            <span id="modalTarjeta" class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-bold">-</span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-100 pb-1">
+                            <span class="font-medium text-gray-500">Valor total compra:</span>
+                            <span id="modalValorTotal" class="text-gray-900 font-semibold">-</span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-100 pb-1">
+                            <span class="font-medium text-gray-500">Cuotas restantes:</span>
+                            <span id="modalCuotas" class="text-gray-900 font-semibold">-</span>
+                        </div>
+                        <div class="flex justify-between pt-2">
+                            <span class="font-bold text-gray-700">Valor por pagar:</span>
+                            <span id="modalValorRestante" class="text-green-600 font-bold text-base">-</span>
+                        </div>
+                    </div>
+            
+                    <p class="text-[10px] text-gray-400 text-center mt-6">* Toca afuera de este cuadro para cerrar</p>
+                </div>
+            </div>
+
     <script>
         const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbz_RptRRgPELXm5avggUt67QDjOrHMu4DAQxVcDJnosFbaRhgAeQt_MewzBO4ap2nyU/exec";
         let gastos = JSON.parse(localStorage.getItem('mis_gastos')) || [];
@@ -105,24 +138,66 @@
             }
         }
 
-        async function cargarDeudas() {
-            try {
-                const response = await fetch(URL_SCRIPT);
-                const deudas = await response.json();
-                const selectDeuda = document.getElementById("deudaSeleccionada");
-                selectDeuda.innerHTML = '<option value="">-- Selecciona deuda --</option>';
-                
-                deudas.forEach(deuda => {
-                    let opcion = document.createElement("option");
-                    opcion.value = deuda.nombre;
-                    opcion.text = `${deuda.tarjeta}: ${deuda.nombre} (Falta: ${deuda.cuotas})`;
-                    opcion.dataset.tarjeta = deuda.tarjeta;
-                    selectDeuda.appendChild(opcion);
-                });
-            } catch (error) {
-                console.error("Error cargando deudas:", error);
-            }
-        }
+        // Variable global para almacenar los detalles completos de las deudas
+        let deudasTemporales = [];
+
+// 1. Modificación para cargar solo los nombres en el cuadro seleccionable
+async function cargarDeudas() {
+    try {
+        const response = await fetch(URL_SCRIPT);
+        deudasTemporales = await response.json(); // Guardamos todo el array aquí
+        
+        const selectDeuda = document.getElementById("deudaSeleccionada");
+        selectDeuda.innerHTML = '<option value="">-- Selecciona una deuda --</option>';
+        
+        deudasTemporales.forEach((deuda, index) => {
+            let opcion = document.createElement("option");
+            opcion.value = deuda.nombre;
+            opcion.text = deuda.nombre; // ¡Ahora solo muestra el NOMBRE limpio!
+            opcion.dataset.index = index; // Guardamos su posición para buscarla rápido
+            selectDeuda.appendChild(opcion);
+        });
+    } catch (error) {
+        console.error("Error cargando deudas:", error);
+    }
+}
+
+// 2. Escuchar cuando el usuario selecciona una deuda para abrir el cuadro emergente
+document.getElementById('deudaSeleccionada').addEventListener('change', function() {
+    const opcionSeleccionada = this.options[this.selectedIndex];
+    if (!opcionSeleccionada || this.value === "") return;
+
+    const index = opcionSeleccionada.dataset.index;
+    const deuda = deudasTemporales[index];
+
+    if (deuda) {
+        // Formateadores de dinero locales
+        const formatearDinero = (num) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(num);
+
+        // Supongamos que el valor que viene es el total de la compra. 
+        // Si calculamos el valor aproximado restante sería: (ValorCompra / CuotasIniciales que asumo o calculo)
+        // Como el doGet actual nos da 'valor' y 'cuotas' vigentes, calculamos el valor de la cuota y lo multiplicamos por las que faltan.
+        // Nota: En tu doGet del Apps Script envías fila[1] (Valor total) y fila[2] (Cuotas vigentes).
+        // Si tu Excel calcula el valor mensual en la columna E, podrías usarlo, pero matemáticamente con lo que recibe la app:
+        let valorRestante = parseFloat(deuda.valor) * parseInt(deuda.cuotas); 
+
+        // Inyectar datos en el cuadro emergente
+        document.getElementById('modalNombre').innerText = `📌 ${deuda.nombre}`;
+        document.getElementById('modalFecha').innerText = deuda.fecha || 'No registrada';
+        document.getElementById('modalTarjeta').innerText = deuda.tarjeta;
+        document.getElementById('modalValorTotal').innerText = formatearDinero(deuda.valor); // Valor de la cuota mensual actual en tu tabla
+        document.getElementById('modalCuotas').innerText = `${deuda.cuotas} pendientes`;
+        document.getElementById('modalValorRestante').innerText = formatearDinero(valorRestante);
+
+        // Mostrar el cuadro emergente quitando la clase 'hidden'
+        document.getElementById('modalDeuda').classList.remove('hidden');
+    }
+});
+
+// 3. Función para cerrar el cuadro emergente al dar clic afuera
+function cerrarModal(event) {
+    document.getElementById('modalDeuda').classList.add('hidden');
+}
 
         document.getElementById('medio_pago').addEventListener('change', function() {
             const contenedor = document.getElementById('contenedor_cuotas');
@@ -170,9 +245,13 @@
             if (tipo === "Pago_Deuda") {
                 const sel = document.getElementById("deudaSeleccionada");
                 nombre = sel.value;
-                medioPago = sel.options[sel.selectedIndex].dataset.tarjeta;
-                cuotas = "PAGO"; // Marcador para el script
-            } else {
+                
+                // Buscamos la tarjeta desde nuestra variable global usando el index seleccionado
+                const indexIndex = sel.options[sel.selectedIndex].dataset.index;
+                medioPago = deudasTemporales[indexIndex].tarjeta;
+                cuotas = "PAGO"; 
+            }
+            else {
                 nombre = document.getElementById('nombre').value;
                 if (medioPago === 'Tarjeta Gold' || medioPago === 'Tarjeta Zero') {
                     cuotas = document.getElementById('cuotas').value || 1;
