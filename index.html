@@ -54,7 +54,7 @@
                 <!-- VALOR -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Valor ($)</label>
-                    <input type="number" id="valor" placeholder="0.00" class="w-full mt-1 p-2 border rounded-md">
+                    <input type="text" id="valor" oninput="formatearMiles(this)" placeholder="0" class="w-full mt-1 p-2 border rounded-md font-semibold text-gray-800">
                 </div>
                 
                 <!-- MEDIO DE PAGO -->
@@ -162,9 +162,10 @@
 
         async function agregarGasto() {
             const tipo = document.getElementById('tipo').value;
-            const valor = document.getElementById('valor').value;
+            const valor = obtenerValorNumerico(); // Trae el número limpio sin puntos
             let medioPago = document.getElementById('medio_pago').value;
             let nombre, cuotas = "";
+            
 
             if (tipo === "Pago_Deuda") {
                 const sel = document.getElementById("deudaSeleccionada");
@@ -178,7 +179,7 @@
                 }
             }
 
-            if(!nombre || !valor) return alert("Llena los campos");
+            if(!nombre || valor === 0) return alert("Llena los campos");
 
             const nuevoGasto = { 
                 tipo, nombre, valor: parseFloat(valor), medioPago, cuotas,
@@ -226,6 +227,28 @@
 
         window.addEventListener('online', intentarSincronizar);
         actualizarUI();
+
+        // Función que da formato con puntos de miles mientras escribes
+            function formatearMiles(input) {
+                // Quita cualquier cosa que no sea un número
+                let valorLimpio = input.value.replace(/\D/g, "");
+                
+                // Si está vacío, lo deja así
+                if (valorLimpio === "") {
+                    input.value = "";
+                    return;
+                }
+                
+                // Le pone los puntos de miles (Formato Colombia/Latam)
+                input.value = new Intl.NumberFormat('es-CO').format(parseInt(valorLimpio));
+            }
+            
+            // Función auxiliar para obtener el número real sin puntos al momento de enviar
+            function obtenerValorNumerico() {
+                const valorVisual = document.getElementById('valor').value;
+                // Quita todos los puntos para que vuelva a ser un número limpio (ej: "1.500.000" -> 1500000)
+                return parseFloat(valorVisual.replace(/\./g, "")) || 0;
+            }
     </script>
 </body>
 </html>
