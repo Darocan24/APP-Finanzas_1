@@ -138,6 +138,48 @@
         </div>
     </div>
 
+<!-- MODAL DE ADVERTENCIA: PAGO EXCEDENTE -->
+    <div id="modalExcedente" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 hidden z-50" onclick="cerrarModalExcedente()">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden transform transition-all" onclick="event.stopPropagation()">
+            <!-- Cabecera Roja -->
+            <div class="bg-red-500 p-4 text-white flex items-center gap-3">
+                <div class="bg-white bg-opacity-20 p-2 rounded-full text-xl">⚠️</div>
+                <div>
+                    <h3 class="font-bold text-lg leading-tight">Monto excedido</h3>
+                    <p class="text-xs text-red-100">El abono supera el saldo pendiente</p>
+                </div>
+            </div>
+
+            <!-- Cuerpo Comparativo -->
+            <div class="p-5 space-y-4">
+                <p class="text-sm text-gray-600">
+                    Estás intentando registrar un pago mayor al saldo actual de <strong id="excNombreDeuda" class="text-gray-900">-</strong>.
+                </p>
+
+                <div class="bg-gray-50 rounded-xl p-3 space-y-2 border border-gray-100 text-sm">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500">Valor digitado:</span>
+                        <span id="excValorDigitado" class="font-bold text-red-600">$0</span>
+                    </div>
+                    <div class="flex justify-between items-center border-t border-gray-200 pt-2">
+                        <span class="text-gray-600 font-medium">Saldo máximo pendiente:</span>
+                        <span id="excSaldoMaximo" class="font-bold text-green-600 text-base">$0</span>
+                    </div>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="flex flex-col gap-2 pt-1">
+                    <button id="btnAjustarSaldo" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-sm">
+                        Ajustar al saldo exacto
+                    </button>
+                    <button onclick="cerrarModalExcedente()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 rounded-lg text-sm transition">
+                        Corregir manualmente
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbz_RptRRgPELXm5avggUt67QDjOrHMu4DAQxVcDJnosFbaRhgAeQt_MewzBO4ap2nyU/exec";
         let gastos = JSON.parse(localStorage.getItem('mis_gastos')) || [];
@@ -244,6 +286,30 @@
             }
         });
 
+        function mostrarModalExcedente(nombreDeuda, valorDigitado, saldoMaximo) {
+            const formatear = (num) => new Intl.NumberFormat('es-CO', { 
+                style: 'currency', 
+                currency: 'COP', 
+                maximumFractionDigits: 0 
+            }).format(num);
+
+            document.getElementById('excNombreDeuda').innerText = nombreDeuda;
+            document.getElementById('excValorDigitado').innerText = formatear(valorDigitado);
+            document.getElementById('excSaldoMaximo').innerText = formatear(saldoMaximo);
+
+            // Configurar el botón para rellenar el saldo exacto con un toque
+            document.getElementById('btnAjustarSaldo').onclick = function() {
+                document.getElementById('valor').value = new Intl.NumberFormat('es-CO').format(saldoMaximo);
+                cerrarModalExcedente();
+            };
+
+            document.getElementById('modalExcedente').classList.remove('hidden');
+        }
+
+        function cerrarModalExcedente() {
+            document.getElementById('modalExcedente').classList.add('hidden');
+        }
+
         // --- LÓGICA DE GASTOS Y HISTORIAL ---
 
         function actualizarUI() {
@@ -308,10 +374,11 @@
                 
                 if (!deudaSeleccionada) return alert("Error al validar la deuda. Vuelve a seleccionarla.");
 
-                // PUNTO 3: Protección contra pagos excedentes
+                // PUNTO 3: Protección contra pagos excedentes con Modal Visual
                 const saldoMaximo = Math.round(parseFloat(deudaSeleccionada.saldoRestante) || 0);
                 if (valor > (saldoMaximo + 10)) {
-                    return alert(`⚠️ Pago excedente bloqueado:\n\nEstás intentando pagar $${valor.toLocaleString('es-CO')}, pero el saldo restante de "${nombre}" es de $${saldoMaximo.toLocaleString('es-CO')}.`);
+                    mostrarModalExcedente(nombre, valor, saldoMaximo);
+                    return;
                 }
 
                 medioPago = deudaSeleccionada.tarjeta;
