@@ -161,9 +161,13 @@ async function cargarDeudas() {
         console.error("Error cargando deudas:", error);
     }
 }
-
-// 2. Escuchar cuando el usuario selecciona una deuda para abrir el cuadro emergente
-document.getElementById('deudaSeleccionada').addEventListener('change', function() {
+ // Inyectar datos reales calculados con interés desde el Excel
+document.getElementById('modalNombre').innerText = `📌 ${deuda.nombre}`;
+document.getElementById('modalFecha').innerText = deuda.fecha || 'No registrada';
+document.getElementById('modalTarjeta').innerText = deuda.tarjeta;
+document.getElementById('modalValorTotal').innerText = formatearDinero(deuda.valorTotal);
+document.getElementById('modalCuotas').innerText = `${deuda.cuotas} de ${deuda.cuotasTotales} (Cuota: ${formatearDinero(deuda.cuotaMensual)})`;
+document.getElementById('modalValorRestante').innerText = formatearDinero(deuda.saldoRestante);{
     const opcionSeleccionada = this.options[this.selectedIndex];
     if (!opcionSeleccionada || this.value === "") return;
 
