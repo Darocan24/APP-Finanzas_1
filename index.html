@@ -18,7 +18,7 @@
         <div class="flex justify-between items-center mb-6">
             <div>
                 <h1 class="text-2xl font-bold text-white leading-tight">💰 Registro de Gastos</h1>
-                <button id="badgeSync" onclick="intentarSincronizar(true)" class="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 transition shadow-sm">
+                <button type="button" id="badgeSync" onclick="intentarSincronizar(true)" class="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 transition shadow-sm">
                     🟢 Sincronizado
                 </button>
             </div>
@@ -42,7 +42,7 @@
                     </select>
                 </div>
 
-                <!-- SELECTOR DE DEUDAS (Solo aparece en Pago_Deuda) -->
+                <!-- SELECTOR DE DEUDAS -->
                 <div id="contenedorDeudas" style="display:none;" class="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                     <label class="block text-sm font-medium text-yellow-800">Selecciona la deuda a pagar:</label>
                     <select id="deudaSeleccionada" class="w-full mt-1 p-2 border border-yellow-300 rounded-md">
@@ -80,7 +80,7 @@
                     <input type="number" id="cuotas" value="1" min="1" max="48" class="w-full mt-1 p-2 border border-blue-300 rounded-md">
                 </div>
                 
-                <button id="btnRegistrar" onclick="agregarGasto()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 transition shadow-sm">
+                <button type="button" id="btnRegistrar" onclick="agregarGasto()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 transition shadow-sm">
                     Registrar Gasto
                 </button>
             </div>
@@ -101,7 +101,7 @@
                     <option value="Regalos">Regalos</option>
                     <option value="Pago_Deuda">Pago Deuda</option>
                 </select>
-                <button onclick="limpiarHistorialLocal()" class="text-xs bg-red-500 hover:bg-red-600 text-white px-2.5 py-1.5 rounded-md font-medium shadow-sm transition">
+                <button type="button" onclick="limpiarHistorialLocal()" class="text-xs bg-red-500 hover:bg-red-600 text-white px-2.5 py-1.5 rounded-md font-medium shadow-sm transition">
                     Limpiar vista
                 </button>
             </div>
@@ -172,10 +172,10 @@
                 </div>
 
                 <div class="flex flex-col gap-2 pt-1">
-                    <button id="btnAjustarSaldo" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-sm">
+                    <button type="button" id="btnAjustarSaldo" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-sm">
                         Ajustar al saldo exacto
                     </button>
-                    <button onclick="cerrarModalExcedente()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 rounded-lg text-sm transition">
+                    <button type="button" onclick="cerrarModalExcedente()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 rounded-lg text-sm transition">
                         Corregir manualmente
                     </button>
                 </div>
@@ -191,7 +191,16 @@
 
     <script>
         const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbz_RptRRgPELXm5avggUt67QDjOrHMu4DAQxVcDJnosFbaRhgAeQt_MewzBO4ap2nyU/exec";
-        let gastos = JSON.parse(localStorage.getItem('mis_gastos')) || [];
+        
+        // Lectura segura de localStorage
+        let gastos = [];
+        try {
+            const guardado = JSON.parse(localStorage.getItem('mis_gastos'));
+            if (Array.isArray(guardado)) gastos = guardado;
+        } catch (e) {
+            localStorage.removeItem('mis_gastos');
+        }
+
         let deudasTemporales = [];
         let toastTimeout;
 
@@ -201,6 +210,7 @@
             const toast = document.getElementById('toast');
             const icono = document.getElementById('toastIcono');
             const texto = document.getElementById('toastMensaje');
+            if (!toast) return;
 
             toast.className = "fixed bottom-5 left-1/2 transform -translate-x-1/2 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium flex items-center gap-2 transition-all duration-300 z-50 max-w-xs w-11/12 justify-center text-center";
 
@@ -223,12 +233,23 @@
             toastTimeout = setTimeout(() => {
                 toast.classList.remove('opacity-100');
                 toast.classList.add('opacity-0', 'pointer-events-none');
-            }, 3200);
+            }, 3500);
+        }
+
+        function obtenerColaSync() {
+            try {
+                const cola = JSON.parse(localStorage.getItem('cola_sync'));
+                return Array.isArray(cola) ? cola : [];
+            } catch (e) {
+                localStorage.removeItem('cola_sync');
+                return [];
+            }
         }
 
         function actualizarBadgeSync(sincronizando = false) {
             const badge = document.getElementById('badgeSync');
-            const pendientes = JSON.parse(localStorage.getItem('cola_sync')) || [];
+            if (!badge) return;
+            const pendientes = obtenerColaSync();
 
             if (sincronizando) {
                 badge.className = "mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 transition shadow-sm";
@@ -377,9 +398,11 @@
             let suma = 0;
 
             gastos.forEach((g, index) => {
+                if (!g || typeof g.valor === 'undefined') return;
                 if (filtro !== "TODOS" && g.tipo !== filtro) return;
 
-                suma += parseFloat(g.valor);
+                const valNum = parseFloat(g.valor) || 0;
+                suma += valNum;
                 lista.innerHTML += `
                     <div class="card p-4 flex justify-between items-center">
                         <div>
@@ -388,8 +411,8 @@
                             <p class="text-[10px] text-blue-500 font-medium mt-1">💳 ${g.medioPago}</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-blue-600 font-semibold">$${parseFloat(g.valor).toLocaleString('es-CO')}</p>
-                            <button onclick="eliminar(${index})" class="text-red-400 text-xs underline">Eliminar</button>
+                            <p class="text-blue-600 font-semibold">$${valNum.toLocaleString('es-CO')}</p>
+                            <button type="button" onclick="eliminar(${index})" class="text-red-400 text-xs underline">Eliminar</button>
                         </div>
                     </div>`;
             });
@@ -399,7 +422,9 @@
             }
 
             totalDisplay.innerText = `$${suma.toLocaleString('es-CO')}`;
-            localStorage.setItem('mis_gastos', JSON.stringify(gastos));
+            try {
+                localStorage.setItem('mis_gastos', JSON.stringify(gastos));
+            } catch (e) {}
         }
 
         function limpiarHistorialLocal() {
@@ -417,74 +442,78 @@
         }
 
         async function agregarGasto() {
-            const tipo = document.getElementById('tipo').value;
-            const valor = obtenerValorNumerico();
-            let medioPago = document.getElementById('medio_pago').value;
-            let nombre, cuotas = "";
+            try {
+                const tipo = document.getElementById('tipo').value;
+                const valor = obtenerValorNumerico();
+                let medioPago = document.getElementById('medio_pago').value;
+                let nombre = "", cuotas = "";
 
-            if (tipo === "Pago_Deuda") {
-                const sel = document.getElementById("deudaSeleccionada");
-                nombre = sel.value;
-                if (!nombre) {
-                    mostrarToast("Selecciona una deuda de la lista", "error");
+                if (tipo === "Pago_Deuda") {
+                    const sel = document.getElementById("deudaSeleccionada");
+                    nombre = sel.value;
+                    if (!nombre) {
+                        mostrarToast("Selecciona una deuda de la lista", "error");
+                        return;
+                    }
+                    
+                    const indexDeuda = sel.options[sel.selectedIndex].dataset.index;
+                    const deudaSeleccionada = deudasTemporales[indexDeuda];
+                    
+                    if (!deudaSeleccionada) {
+                        mostrarToast("Vuelve a seleccionar la deuda", "error");
+                        return;
+                    }
+
+                    const saldoMaximo = Math.round(parseFloat(deudaSeleccionada.saldoRestante) || 0);
+                    if (valor > (saldoMaximo + 10)) {
+                        mostrarModalExcedente(nombre, valor, saldoMaximo);
+                        return;
+                    }
+
+                    medioPago = deudaSeleccionada.tarjeta;
+                    cuotas = "PAGO"; 
+                } else {
+                    nombre = document.getElementById('nombre').value.trim();
+                    if (medioPago === 'Tarjeta Gold' || medioPago === 'Tarjeta Zero') {
+                        cuotas = document.getElementById('cuotas').value || 1;
+                    }
+                }
+
+                if (!nombre || valor <= 0) {
+                    mostrarToast("Completa el nombre y un valor mayor a $0", "error");
                     return;
                 }
+
+                const nuevoGasto = { 
+                    tipo, nombre, valor: parseFloat(valor), medioPago, cuotas,
+                    fecha: new Date().toLocaleString(), id: Date.now() 
+                };
+
+                gastos.unshift(nuevoGasto);
+                actualizarUI();
+
+                let pendientes = obtenerColaSync();
+                pendientes.push(nuevoGasto);
+                localStorage.setItem('cola_sync', JSON.stringify(pendientes));
+                actualizarBadgeSync(false);
+
+                document.getElementById('nombre').value = '';
+                document.getElementById('valor').value = '';
                 
-                const indexDeuda = sel.options[sel.selectedIndex].dataset.index;
-                const deudaSeleccionada = deudasTemporales[indexDeuda];
-                
-                if (!deudaSeleccionada) {
-                    mostrarToast("Vuelve a seleccionar la deuda", "error");
-                    return;
+                await intentarSincronizar(false);
+
+                if (tipo === "Pago_Deuda") {
+                    document.getElementById('ayudaSaldoDeuda').classList.add('hidden');
+                    setTimeout(cargarDeudas, 1500);
                 }
-
-                const saldoMaximo = Math.round(parseFloat(deudaSeleccionada.saldoRestante) || 0);
-                if (valor > (saldoMaximo + 10)) {
-                    mostrarModalExcedente(nombre, valor, saldoMaximo);
-                    return;
-                }
-
-                medioPago = deudaSeleccionada.tarjeta;
-                cuotas = "PAGO"; 
-            } else {
-                nombre = document.getElementById('nombre').value.trim();
-                if (medioPago === 'Tarjeta Gold' || medioPago === 'Tarjeta Zero') {
-                    cuotas = document.getElementById('cuotas').value || 1;
-                }
-            }
-
-            if (!nombre || valor <= 0) {
-                mostrarToast("Completa el nombre y un valor mayor a $0", "error");
-                return;
-            }
-
-            const nuevoGasto = { 
-                tipo, nombre, valor: parseFloat(valor), medioPago, cuotas,
-                fecha: new Date().toLocaleString(), id: Date.now() 
-            };
-
-            gastos.unshift(nuevoGasto);
-            actualizarUI();
-
-            let pendientes = JSON.parse(localStorage.getItem('cola_sync')) || [];
-            pendientes.push(nuevoGasto);
-            localStorage.setItem('cola_sync', JSON.stringify(pendientes));
-            actualizarBadgeSync(false);
-
-            // Reset campos inmediatos para agilidad
-            document.getElementById('nombre').value = '';
-            document.getElementById('valor').value = '';
-            
-            await intentarSincronizar();
-
-            if (tipo === "Pago_Deuda") {
-                document.getElementById('ayudaSaldoDeuda').classList.add('hidden');
-                setTimeout(cargarDeudas, 1500);
+            } catch (err) {
+                console.error(err);
+                mostrarToast("Error interno: " + err.message, "error");
             }
         }
 
         async function intentarSincronizar(manual = false) {
-            let pendientes = JSON.parse(localStorage.getItem('cola_sync')) || [];
+            let pendientes = obtenerColaSync();
             if (pendientes.length === 0) {
                 actualizarBadgeSync(false);
                 if (manual) mostrarToast("Todo está sincronizado con Excel", "exito");
@@ -537,12 +566,22 @@
                 input.value = "";
                 return;
             }
-            input.value = new Intl.NumberFormat('es-CO').format(parseInt(valorLimpio));
+            input.value = new Intl.NumberFormat('es-CO').format(parseInt(valorLimpio, 10));
         }
         
         function obtenerValorNumerico() {
-            const valorVisual = document.getElementById('valor').value;
-            return parseFloat(valorVisual.replace(/\./g, "")) || 0;
+            const valorVisual = document.getElementById('valor').value || "";
+            const soloNumeros = valorVisual.replace(/\D/g, "");
+            return parseFloat(soloNumeros) || 0;
         }
 
-        window.addEvent
+        window.addEventListener('online', () => intentarSincronizar(false));
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            actualizarUI();
+            actualizarBadgeSync(false);
+            intentarSincronizar(false);
+        });
+    </script>
+</body>
+</html>
