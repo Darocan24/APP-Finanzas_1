@@ -11,13 +11,19 @@
         .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     </style>
 </head>
-<body class="p-4">
+<body class="p-4 pb-20">
 
     <div class="max-w-md mx-auto">
-        <h1 class="text-2xl font-bold text-white mb-6 flex justify-between items-center">
-            💰 Registro de Gastos
-            <span id="total" class="bg-white text-blue-700 px-3 py-1 rounded-full text-base font-bold shadow">$0</span>
-        </h1>
+        <!-- CABECERA CON INDICADOR DE SINCRONIZACIÓN Y TOTAL -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-white leading-tight">💰 Registro de Gastos</h1>
+                <button id="badgeSync" onclick="intentarSincronizar(true)" class="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 transition shadow-sm">
+                    🟢 Sincronizado
+                </button>
+            </div>
+            <span id="total" class="bg-white text-blue-700 px-3.5 py-1.5 rounded-full text-base font-bold shadow">$0</span>
+        </div>
 
         <div class="card p-6 mb-6">
             <div class="space-y-4">
@@ -74,13 +80,13 @@
                     <input type="number" id="cuotas" value="1" min="1" max="48" class="w-full mt-1 p-2 border border-blue-300 rounded-md">
                 </div>
                 
-                <button onclick="agregarGasto()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 transition">
+                <button id="btnRegistrar" onclick="agregarGasto()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-md hover:bg-blue-700 transition shadow-sm">
                     Registrar Gasto
                 </button>
             </div>
         </div>
 
-        <!-- CONTROLES DE HISTORIAL RECIENTE (PUNTO 4) -->
+        <!-- CONTROLES DE HISTORIAL RECIENTE -->
         <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
             <h2 class="text-lg font-semibold text-white">Historial Reciente</h2>
             <div class="flex items-center gap-2">
@@ -138,10 +144,9 @@
         </div>
     </div>
 
-<!-- MODAL DE ADVERTENCIA: PAGO EXCEDENTE -->
+    <!-- MODAL DE ADVERTENCIA: PAGO EXCEDENTE -->
     <div id="modalExcedente" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 hidden z-50" onclick="cerrarModalExcedente()">
         <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden transform transition-all" onclick="event.stopPropagation()">
-            <!-- Cabecera Roja -->
             <div class="bg-red-500 p-4 text-white flex items-center gap-3">
                 <div class="bg-white bg-opacity-20 p-2 rounded-full text-xl">⚠️</div>
                 <div>
@@ -150,7 +155,6 @@
                 </div>
             </div>
 
-            <!-- Cuerpo Comparativo -->
             <div class="p-5 space-y-4">
                 <p class="text-sm text-gray-600">
                     Estás intentando registrar un pago mayor al saldo actual de <strong id="excNombreDeuda" class="text-gray-900">-</strong>.
@@ -167,7 +171,6 @@
                     </div>
                 </div>
 
-                <!-- Botones de Acción -->
                 <div class="flex flex-col gap-2 pt-1">
                     <button id="btnAjustarSaldo" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-sm">
                         Ajustar al saldo exacto
@@ -180,10 +183,67 @@
         </div>
     </div>
 
+    <!-- CONTENEDOR DE NOTIFICACIONES TOAST -->
+    <div id="toast" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium flex items-center gap-2 transition-all duration-300 opacity-0 pointer-events-none z-50 max-w-xs w-11/12 justify-center text-center">
+        <span id="toastIcono">✅</span>
+        <span id="toastMensaje">Mensaje</span>
+    </div>
+
     <script>
         const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbz_RptRRgPELXm5avggUt67QDjOrHMu4DAQxVcDJnosFbaRhgAeQt_MewzBO4ap2nyU/exec";
         let gastos = JSON.parse(localStorage.getItem('mis_gastos')) || [];
         let deudasTemporales = [];
+        let toastTimeout;
+
+        // --- SISTEMA DE NOTIFICACIONES TOAST Y ESTADO DE SINCRONIZACIÓN ---
+
+        function mostrarToast(mensaje, tipo = 'exito') {
+            const toast = document.getElementById('toast');
+            const icono = document.getElementById('toastIcono');
+            const texto = document.getElementById('toastMensaje');
+
+            toast.className = "fixed bottom-5 left-1/2 transform -translate-x-1/2 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium flex items-center gap-2 transition-all duration-300 z-50 max-w-xs w-11/12 justify-center text-center";
+
+            if (tipo === 'exito') {
+                toast.classList.add('bg-emerald-600');
+                icono.innerText = '✅';
+            } else if (tipo === 'advertencia') {
+                toast.classList.add('bg-amber-500');
+                icono.innerText = '⏳';
+            } else if (tipo === 'error') {
+                toast.classList.add('bg-red-600');
+                icono.innerText = '⚠️';
+            }
+
+            texto.innerText = mensaje;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3200);
+        }
+
+        function actualizarBadgeSync(sincronizando = false) {
+            const badge = document.getElementById('badgeSync');
+            const pendientes = JSON.parse(localStorage.getItem('cola_sync')) || [];
+
+            if (sincronizando) {
+                badge.className = "mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 transition shadow-sm";
+                badge.innerHTML = "🔄 Sincronizando...";
+                return;
+            }
+
+            if (pendientes.length > 0) {
+                badge.className = "mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 transition shadow-sm cursor-pointer";
+                badge.innerHTML = `🟡 Pendiente (${pendientes.length}) • Tocar`;
+            } else {
+                badge.className = "mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 transition shadow-sm";
+                badge.innerHTML = "🟢 Sincronizado";
+            }
+        }
 
         // --- LÓGICA DE INTERFAZ ---
 
@@ -223,10 +283,10 @@
             } catch (error) {
                 console.error("Error cargando deudas:", error);
                 selectDeuda.innerHTML = '<option value="">Error al cargar deudas</option>';
+                mostrarToast("Sin conexión para leer deudas", "advertencia");
             }
         }
 
-        // PUNTO 2: Autocompletar valor de cuota y abrir modal al seleccionar deuda
         document.getElementById('deudaSeleccionada').addEventListener('change', function() {
             const opcionSeleccionada = this.options[this.selectedIndex];
             const ayudaSaldo = document.getElementById('ayudaSaldoDeuda');
@@ -246,7 +306,6 @@
                     maximumFractionDigits: 0 
                 }).format(num || 0);
 
-                // 1. Llenar modal informativo
                 document.getElementById('modalNombre').innerText = `📌 ${deuda.nombre}`;
                 document.getElementById('modalFecha').innerText = deuda.fecha || 'No registrada';
                 document.getElementById('modalTarjeta').innerText = deuda.tarjeta;
@@ -256,16 +315,13 @@
                 
                 document.getElementById('modalDeuda').classList.remove('hidden');
 
-                // 2. Autocompletar el campo Valor ($) con la cuota sugerida (redondeada)
                 const cuotaSugerida = Math.round(parseFloat(deuda.cuotaMensual) || 0);
                 const inputValor = document.getElementById('valor');
                 inputValor.value = cuotaSugerida > 0 ? new Intl.NumberFormat('es-CO').format(cuotaSugerida) : "";
 
-                // 3. Seleccionar automáticamente la tarjeta asociada y ocultar cuotas
                 document.getElementById('medio_pago').value = deuda.tarjeta;
                 document.getElementById('contenedor_cuotas').classList.add('hidden');
 
-                // 4. Mostrar ayuda visual debajo del selector con el saldo máximo permitible
                 ayudaSaldo.innerText = `Cuota sugerida: ${formatearDinero(cuotaSugerida)} | Saldo total: ${formatearDinero(deuda.saldoRestante)}`;
                 ayudaSaldo.classList.remove('hidden');
             }
@@ -273,6 +329,30 @@
 
         function cerrarModal(event) {
             document.getElementById('modalDeuda').classList.add('hidden');
+        }
+
+        function mostrarModalExcedente(nombreDeuda, valorDigitado, saldoMaximo) {
+            const formatear = (num) => new Intl.NumberFormat('es-CO', { 
+                style: 'currency', 
+                currency: 'COP', 
+                maximumFractionDigits: 0 
+            }).format(num);
+
+            document.getElementById('excNombreDeuda').innerText = nombreDeuda;
+            document.getElementById('excValorDigitado').innerText = formatear(valorDigitado);
+            document.getElementById('excSaldoMaximo').innerText = formatear(saldoMaximo);
+
+            document.getElementById('btnAjustarSaldo').onclick = function() {
+                document.getElementById('valor').value = new Intl.NumberFormat('es-CO').format(saldoMaximo);
+                cerrarModalExcedente();
+                mostrarToast("Valor ajustado al saldo exacto", "exito");
+            };
+
+            document.getElementById('modalExcedente').classList.remove('hidden');
+        }
+
+        function cerrarModalExcedente() {
+            document.getElementById('modalExcedente').classList.add('hidden');
         }
 
         document.getElementById('medio_pago').addEventListener('change', function() {
@@ -286,30 +366,6 @@
             }
         });
 
-        function mostrarModalExcedente(nombreDeuda, valorDigitado, saldoMaximo) {
-            const formatear = (num) => new Intl.NumberFormat('es-CO', { 
-                style: 'currency', 
-                currency: 'COP', 
-                maximumFractionDigits: 0 
-            }).format(num);
-
-            document.getElementById('excNombreDeuda').innerText = nombreDeuda;
-            document.getElementById('excValorDigitado').innerText = formatear(valorDigitado);
-            document.getElementById('excSaldoMaximo').innerText = formatear(saldoMaximo);
-
-            // Configurar el botón para rellenar el saldo exacto con un toque
-            document.getElementById('btnAjustarSaldo').onclick = function() {
-                document.getElementById('valor').value = new Intl.NumberFormat('es-CO').format(saldoMaximo);
-                cerrarModalExcedente();
-            };
-
-            document.getElementById('modalExcedente').classList.remove('hidden');
-        }
-
-        function cerrarModalExcedente() {
-            document.getElementById('modalExcedente').classList.add('hidden');
-        }
-
         // --- LÓGICA DE GASTOS Y HISTORIAL ---
 
         function actualizarUI() {
@@ -321,7 +377,6 @@
             let suma = 0;
 
             gastos.forEach((g, index) => {
-                // Aplicamos filtro si no está en "TODOS"
                 if (filtro !== "TODOS" && g.tipo !== filtro) return;
 
                 suma += parseFloat(g.valor);
@@ -347,14 +402,17 @@
             localStorage.setItem('mis_gastos', JSON.stringify(gastos));
         }
 
-        // PUNTO 4: Limpiar historial visual sin tocar el Excel
         function limpiarHistorialLocal() {
-            if (gastos.length === 0) return;
+            if (gastos.length === 0) {
+                mostrarToast("La lista ya está vacía", "advertencia");
+                return;
+            }
             const confirmar = confirm("¿Limpiar la lista de 'Historial Reciente' en este dispositivo?\n\n(Tus datos ya enviados a Google Sheets NO se borrarán).");
             if (confirmar) {
                 gastos = [];
                 localStorage.setItem('mis_gastos', JSON.stringify(gastos));
                 actualizarUI();
+                mostrarToast("Vista local limpiada", "exito");
             }
         }
 
@@ -367,14 +425,19 @@
             if (tipo === "Pago_Deuda") {
                 const sel = document.getElementById("deudaSeleccionada");
                 nombre = sel.value;
-                if (!nombre) return alert("Selecciona una deuda de la lista");
+                if (!nombre) {
+                    mostrarToast("Selecciona una deuda de la lista", "error");
+                    return;
+                }
                 
                 const indexDeuda = sel.options[sel.selectedIndex].dataset.index;
                 const deudaSeleccionada = deudasTemporales[indexDeuda];
                 
-                if (!deudaSeleccionada) return alert("Error al validar la deuda. Vuelve a seleccionarla.");
+                if (!deudaSeleccionada) {
+                    mostrarToast("Vuelve a seleccionar la deuda", "error");
+                    return;
+                }
 
-                // PUNTO 3: Protección contra pagos excedentes con Modal Visual
                 const saldoMaximo = Math.round(parseFloat(deudaSeleccionada.saldoRestante) || 0);
                 if (valor > (saldoMaximo + 10)) {
                     mostrarModalExcedente(nombre, valor, saldoMaximo);
@@ -384,13 +447,16 @@
                 medioPago = deudaSeleccionada.tarjeta;
                 cuotas = "PAGO"; 
             } else {
-                nombre = document.getElementById('nombre').value;
+                nombre = document.getElementById('nombre').value.trim();
                 if (medioPago === 'Tarjeta Gold' || medioPago === 'Tarjeta Zero') {
                     cuotas = document.getElementById('cuotas').value || 1;
                 }
             }
 
-            if (!nombre || valor <= 0) return alert("Llena todos los campos con un valor válido.");
+            if (!nombre || valor <= 0) {
+                mostrarToast("Completa el nombre y un valor mayor a $0", "error");
+                return;
+            }
 
             const nuevoGasto = { 
                 tipo, nombre, valor: parseFloat(valor), medioPago, cuotas,
@@ -403,24 +469,36 @@
             let pendientes = JSON.parse(localStorage.getItem('cola_sync')) || [];
             pendientes.push(nuevoGasto);
             localStorage.setItem('cola_sync', JSON.stringify(pendientes));
-            
-            await intentarSincronizar();
+            actualizarBadgeSync(false);
 
-            // Reset campos
+            // Reset campos inmediatos para agilidad
             document.getElementById('nombre').value = '';
             document.getElementById('valor').value = '';
             
-            // Si fue un pago de deuda, recargamos la lista para reflejar el nuevo saldo o eliminarla si se liquidó
+            await intentarSincronizar();
+
             if (tipo === "Pago_Deuda") {
                 document.getElementById('ayudaSaldoDeuda').classList.add('hidden');
                 setTimeout(cargarDeudas, 1500);
             }
         }
 
-        async function intentarSincronizar() {
-            if (!navigator.onLine) return;
+        async function intentarSincronizar(manual = false) {
             let pendientes = JSON.parse(localStorage.getItem('cola_sync')) || [];
-            if (pendientes.length === 0) return;
+            if (pendientes.length === 0) {
+                actualizarBadgeSync(false);
+                if (manual) mostrarToast("Todo está sincronizado con Excel", "exito");
+                return;
+            }
+
+            if (!navigator.onLine) {
+                actualizarBadgeSync(false);
+                mostrarToast("Guardado local. Se enviará al recuperar señal", "advertencia");
+                return;
+            }
+
+            actualizarBadgeSync(true);
+            let enviados = 0;
 
             for (let i = 0; i < pendientes.length; i++) {
                 try {
@@ -431,14 +509,26 @@
                     });
                     pendientes.splice(i, 1);
                     i--; 
-                } catch (error) { break; }
+                    enviados++;
+                } catch (error) { 
+                    break; 
+                }
             }
+
             localStorage.setItem('cola_sync', JSON.stringify(pendientes));
+            actualizarBadgeSync(false);
+
+            if (pendientes.length === 0 && enviados > 0) {
+                mostrarToast("Registrado y sincronizado con Excel", "exito");
+            } else if (pendientes.length > 0) {
+                mostrarToast(`Quedan ${pendientes.length} pendientes por enviar`, "advertencia");
+            }
         }
 
         function eliminar(index) {
             gastos.splice(index, 1);
             actualizarUI();
+            mostrarToast("Eliminado de la vista local", "advertencia");
         }
 
         function formatearMiles(input) {
@@ -455,8 +545,4 @@
             return parseFloat(valorVisual.replace(/\./g, "")) || 0;
         }
 
-        window.addEventListener('online', intentarSincronizar);
-        actualizarUI();
-    </script>
-</body>
-</html>
+        window.addEvent
