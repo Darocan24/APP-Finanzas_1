@@ -14,9 +14,9 @@
 <body class="p-4">
 
     <div class="max-w-md mx-auto">
-        <h1 class="text-2xl font-bold text-white mb-6 flex justify-between">
+        <h1 class="text-2xl font-bold text-white mb-6 flex justify-between items-center">
             💰 Registro de Gastos
-            <span id="total" class="text-blue-600 text-lg">$0</span>
+            <span id="total" class="bg-white text-blue-700 px-3 py-1 rounded-full text-base font-bold shadow">$0</span>
         </h1>
 
         <div class="card p-6 mb-6">
@@ -42,6 +42,7 @@
                     <select id="deudaSeleccionada" class="w-full mt-1 p-2 border border-yellow-300 rounded-md">
                         <option value="">Cargando deudas...</option>
                     </select>
+                    <p id="ayudaSaldoDeuda" class="text-xs text-yellow-700 mt-1 hidden"></p>
                 </div>
 
                 <!-- NOMBRE DEL GASTO -->
@@ -79,7 +80,27 @@
             </div>
         </div>
 
-        <h2 class="text-lg font-semibold mb-3 text-white">Historial Reciente</h2>
+        <!-- CONTROLES DE HISTORIAL RECIENTE (PUNTO 4) -->
+        <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+            <h2 class="text-lg font-semibold text-white">Historial Reciente</h2>
+            <div class="flex items-center gap-2">
+                <select id="filtroHistorial" onchange="actualizarUI()" class="text-xs p-1.5 rounded-md bg-white text-gray-700 font-medium shadow-sm">
+                    <option value="TODOS">Todas</option>
+                    <option value="Alimentación">Alimentación</option>
+                    <option value="Transporte">Transporte</option>
+                    <option value="Cuidado Personal">Cuidado Personal</option>
+                    <option value="Hogar">Hogar</option>
+                    <option value="Entretenimiento">Entretenimiento</option>
+                    <option value="Mascotas">Mascotas</option>
+                    <option value="Regalos">Regalos</option>
+                    <option value="Pago_Deuda">Pago Deuda</option>
+                </select>
+                <button onclick="limpiarHistorialLocal()" class="text-xs bg-red-500 hover:bg-red-600 text-white px-2.5 py-1.5 rounded-md font-medium shadow-sm transition">
+                    Limpiar vista
+                </button>
+            </div>
+        </div>
+
         <div id="lista-gastos" class="space-y-2"></div>
     </div>
 
@@ -128,6 +149,7 @@
             const tipo = document.getElementById("tipo").value;
             const contDeudas = document.getElementById("contenedorDeudas");
             const contNombre = document.getElementById("contenedorNombre");
+            const ayudaSaldo = document.getElementById("ayudaSaldoDeuda");
             
             if (tipo === "Pago_Deuda") {
                 contDeudas.style.display = "block";
@@ -136,15 +158,17 @@
             } else {
                 contDeudas.style.display = "none";
                 contNombre.style.display = "block";
+                ayudaSaldo.classList.add("hidden");
             }
         }
 
         async function cargarDeudas() {
+            const selectDeuda = document.getElementById("deudaSeleccionada");
+            selectDeuda.innerHTML = '<option value="">Cargando deudas...</option>';
             try {
                 const response = await fetch(URL_SCRIPT);
                 deudasTemporales = await response.json();
                 
-                const selectDeuda = document.getElementById("deudaSeleccionada");
                 selectDeuda.innerHTML = '<option value="">-- Selecciona una deuda --</option>';
                 
                 deudasTemporales.forEach((deuda, index) => {
@@ -156,13 +180,19 @@
                 });
             } catch (error) {
                 console.error("Error cargando deudas:", error);
+                selectDeuda.innerHTML = '<option value="">Error al cargar deudas</option>';
             }
         }
 
-        // Evento corregido al seleccionar una deuda
+        // PUNTO 2: Autocompletar valor de cuota y abrir modal al seleccionar deuda
         document.getElementById('deudaSeleccionada').addEventListener('change', function() {
             const opcionSeleccionada = this.options[this.selectedIndex];
-            if (!opcionSeleccionada || this.value === "") return;
+            const ayudaSaldo = document.getElementById('ayudaSaldoDeuda');
+
+            if (!opcionSeleccionada || this.value === "") {
+                ayudaSaldo.classList.add('hidden');
+                return;
+            }
 
             const index = opcionSeleccionada.dataset.index;
             const deuda = deudasTemporales[index];
@@ -174,13 +204,28 @@
                     maximumFractionDigits: 0 
                 }).format(num || 0);
 
+                // 1. Llenar modal informativo
                 document.getElementById('modalNombre').innerText = `📌 ${deuda.nombre}`;
                 document.getElementById('modalFecha').innerText = deuda.fecha || 'No registrada';
                 document.getElementById('modalTarjeta').innerText = deuda.tarjeta;
                 document.getElementById('modalValorTotal').innerText = formatearDinero(deuda.valorTotal);
                 document.getElementById('modalCuotas').innerText = `${deuda.cuotas} de ${deuda.cuotasTotales} (Cuota: ${formatearDinero(deuda.cuotaMensual)})`;
                 document.getElementById('modalValorRestante').innerText = formatearDinero(deuda.saldoRestante);
+                
                 document.getElementById('modalDeuda').classList.remove('hidden');
+
+                // 2. Autocompletar el campo Valor ($) con la cuota sugerida (redondeada)
+                const cuotaSugerida = Math.round(parseFloat(deuda.cuotaMensual) || 0);
+                const inputValor = document.getElementById('valor');
+                inputValor.value = cuotaSugerida > 0 ? new Intl.NumberFormat('es-CO').format(cuotaSugerida) : "";
+
+                // 3. Seleccionar automáticamente la tarjeta asociada y ocultar cuotas
+                document.getElementById('medio_pago').value = deuda.tarjeta;
+                document.getElementById('contenedor_cuotas').classList.add('hidden');
+
+                // 4. Mostrar ayuda visual debajo del selector con el saldo máximo permitible
+                ayudaSaldo.innerText = `Cuota sugerida: ${formatearDinero(cuotaSugerida)} | Saldo total: ${formatearDinero(deuda.saldoRestante)}`;
+                ayudaSaldo.classList.remove('hidden');
             }
         });
 
@@ -189,8 +234,9 @@
         }
 
         document.getElementById('medio_pago').addEventListener('change', function() {
+            const tipo = document.getElementById('tipo').value;
             const contenedor = document.getElementById('contenedor_cuotas');
-            if (this.value === 'Tarjeta Gold' || this.value === 'Tarjeta Zero') {
+            if (tipo !== 'Pago_Deuda' && (this.value === 'Tarjeta Gold' || this.value === 'Tarjeta Zero')) {
                 contenedor.classList.remove('hidden');
             } else {
                 contenedor.classList.add('hidden');
@@ -198,14 +244,20 @@
             }
         });
 
-        // --- LÓGICA DE GASTOS ---
+        // --- LÓGICA DE GASTOS Y HISTORIAL ---
 
         function actualizarUI() {
             const lista = document.getElementById('lista-gastos');
             const totalDisplay = document.getElementById('total');
+            const filtro = document.getElementById('filtroHistorial').value;
+            
             lista.innerHTML = '';
             let suma = 0;
+
             gastos.forEach((g, index) => {
+                // Aplicamos filtro si no está en "TODOS"
+                if (filtro !== "TODOS" && g.tipo !== filtro) return;
+
                 suma += parseFloat(g.valor);
                 lista.innerHTML += `
                     <div class="card p-4 flex justify-between items-center">
@@ -215,13 +267,29 @@
                             <p class="text-[10px] text-blue-500 font-medium mt-1">💳 ${g.medioPago}</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-blue-600 font-semibold">$${parseFloat(g.valor).toLocaleString()}</p>
+                            <p class="text-blue-600 font-semibold">$${parseFloat(g.valor).toLocaleString('es-CO')}</p>
                             <button onclick="eliminar(${index})" class="text-red-400 text-xs underline">Eliminar</button>
                         </div>
                     </div>`;
             });
-            totalDisplay.innerText = `$${suma.toLocaleString()}`;
+
+            if (lista.innerHTML === '') {
+                lista.innerHTML = `<p class="text-center text-blue-200 text-sm py-4">No hay registros en esta vista.</p>`;
+            }
+
+            totalDisplay.innerText = `$${suma.toLocaleString('es-CO')}`;
             localStorage.setItem('mis_gastos', JSON.stringify(gastos));
+        }
+
+        // PUNTO 4: Limpiar historial visual sin tocar el Excel
+        function limpiarHistorialLocal() {
+            if (gastos.length === 0) return;
+            const confirmar = confirm("¿Limpiar la lista de 'Historial Reciente' en este dispositivo?\n\n(Tus datos ya enviados a Google Sheets NO se borrarán).");
+            if (confirmar) {
+                gastos = [];
+                localStorage.setItem('mis_gastos', JSON.stringify(gastos));
+                actualizarUI();
+            }
         }
 
         async function agregarGasto() {
@@ -236,7 +304,17 @@
                 if (!nombre) return alert("Selecciona una deuda de la lista");
                 
                 const indexDeuda = sel.options[sel.selectedIndex].dataset.index;
-                medioPago = deudasTemporales[indexDeuda].tarjeta;
+                const deudaSeleccionada = deudasTemporales[indexDeuda];
+                
+                if (!deudaSeleccionada) return alert("Error al validar la deuda. Vuelve a seleccionarla.");
+
+                // PUNTO 3: Protección contra pagos excedentes
+                const saldoMaximo = Math.round(parseFloat(deudaSeleccionada.saldoRestante) || 0);
+                if (valor > (saldoMaximo + 10)) {
+                    return alert(`⚠️ Pago excedente bloqueado:\n\nEstás intentando pagar $${valor.toLocaleString('es-CO')}, pero el saldo restante de "${nombre}" es de $${saldoMaximo.toLocaleString('es-CO')}.`);
+                }
+
+                medioPago = deudaSeleccionada.tarjeta;
                 cuotas = "PAGO"; 
             } else {
                 nombre = document.getElementById('nombre').value;
@@ -245,7 +323,7 @@
                 }
             }
 
-            if (!nombre || valor === 0) return alert("Llena los campos");
+            if (!nombre || valor <= 0) return alert("Llena todos los campos con un valor válido.");
 
             const nuevoGasto = { 
                 tipo, nombre, valor: parseFloat(valor), medioPago, cuotas,
@@ -259,10 +337,17 @@
             pendientes.push(nuevoGasto);
             localStorage.setItem('cola_sync', JSON.stringify(pendientes));
             
-            intentarSincronizar();
+            await intentarSincronizar();
 
+            // Reset campos
             document.getElementById('nombre').value = '';
             document.getElementById('valor').value = '';
+            
+            // Si fue un pago de deuda, recargamos la lista para reflejar el nuevo saldo o eliminarla si se liquidó
+            if (tipo === "Pago_Deuda") {
+                document.getElementById('ayudaSaldoDeuda').classList.add('hidden');
+                setTimeout(cargarDeudas, 1500);
+            }
         }
 
         async function intentarSincronizar() {
