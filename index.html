@@ -186,12 +186,12 @@ document.getElementById('modalValorRestante').innerText = formatearDinero(deuda.
         let valorRestante = parseFloat(deuda.valor) * parseInt(deuda.cuotas); 
 
         // Inyectar datos en el cuadro emergente
-        document.getElementById('modalNombre').innerText = `📌 ${deuda.nombre}`;
+    //    document.getElementById('modalNombre').innerText = `📌 ${deuda.nombre}`;
         document.getElementById('modalFecha').innerText = deuda.fecha || 'No registrada';
-        document.getElementById('modalTarjeta').innerText = deuda.tarjeta;
-        document.getElementById('modalValorTotal').innerText = formatearDinero(deuda.valor); // Valor de la cuota mensual actual en tu tabla
-        document.getElementById('modalCuotas').innerText = `${deuda.cuotas} pendientes`;
-        document.getElementById('modalValorRestante').innerText = formatearDinero(valorRestante);
+     //   document.getElementById('modalTarjeta').innerText = deuda.tarjeta;
+      //  document.getElementById('modalValorTotal').innerText = formatearDinero(deuda.valor); // Valor de la cuota mensual actual en tu tabla
+     //   document.getElementById('modalCuotas').innerText = `${deuda.cuotas} pendientes`;
+     //   document.getElementById('modalValorRestante').innerText = formatearDinero(valorRestante);
 
         // Mostrar el cuadro emergente quitando la clase 'hidden'
         document.getElementById('modalDeuda').classList.remove('hidden');
